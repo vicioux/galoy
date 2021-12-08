@@ -12,6 +12,7 @@ import {
   GetChainTransactionsResult,
   createChainAddress,
   getChainFeeEstimate,
+  getChainBalance,
 } from "lightning"
 import { getActiveOnchainLnd } from "./utils"
 
@@ -27,6 +28,15 @@ export const OnChainService = (
     pubkey = activeNode.pubkey as Pubkey
   } catch (err) {
     return new OnChainServiceUnavailableError(err)
+  }
+
+  const getBalance = async (): Promise<Satoshis | OnChainServiceError> => {
+    try {
+      const { chain_balance } = await getChainBalance({ lnd })
+      return toSats(chain_balance)
+    } catch (err) {
+      return new UnknownOnChainServiceError(err)
+    }
   }
 
   const listTransactions = async (
@@ -111,6 +121,7 @@ export const OnChainService = (
   }
 
   return {
+    getBalance,
     listIncomingTransactions,
     lookupOnChainFee,
     createOnChainAddress,
