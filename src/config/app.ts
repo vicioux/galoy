@@ -74,6 +74,9 @@ const getOnChainScanDepth = (val: number): ScanDepth => {
   return scanDepth
 }
 export const ONCHAIN_SCAN_DEPTH = getOnChainScanDepth(yamlConfig.onChainWallet.scanDepth)
+export const ONCHAIN_SCAN_DEPTH_INCOMING = getOnChainScanDepth(
+  yamlConfig.onChainWallet.scanDepthIncoming,
+)
 export const ONCHAIN_SCAN_DEPTH_OUTGOING = getOnChainScanDepth(
   yamlConfig.onChainWallet.scanDepthOutgoing,
 )
