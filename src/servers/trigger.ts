@@ -2,6 +2,7 @@ import { Storage } from "@google-cloud/storage"
 import crypto from "crypto"
 import { Dropbox } from "dropbox"
 import express from "express"
+import mongoose from "mongoose"
 import {
   subscribeToBackups,
   subscribeToBlocks,
@@ -20,6 +21,7 @@ import * as Wallets from "@app/wallets"
 import { NotificationsService } from "@services/notifications"
 import { toSats } from "@domain/bitcoin"
 import { getCurrentPrice } from "@app/prices"
+import { redis } from "@services/redis"
 
 const logger = baseLogger.child({ module: "trigger" })
 
@@ -231,8 +233,9 @@ const listenerOffchain = ({ lnd, pubkey }) => {
   })
 }
 
+const lndStatus = {}
 const main = () => {
-  lndStatusEvent.on("started", ({ lnd, pubkey, socket, type }) => {
+  lndStatusEvent.on("started", ({ lnd, pubkey, active, socket, type }) => {
     baseLogger.info({ socket }, "lnd started")
 
     if (type.indexOf("onchain") !== -1) {
@@ -242,10 +245,13 @@ const main = () => {
     if (type.indexOf("offchain") !== -1) {
       listenerOffchain({ lnd, pubkey })
     }
+
+    lndStatus[pubkey] = active
   })
 
-  lndStatusEvent.on("stopped", ({ socket }) => {
+  lndStatusEvent.on("stopped", ({ pubkey, active, socket }) => {
     baseLogger.info({ socket }, "lnd stopped")
+    lndStatus[pubkey] = active
   })
 
   activateLndHealthCheck()
@@ -255,7 +261,13 @@ const main = () => {
 const healthCheck = () => {
   const app = express()
   const port = 8888
-  app.get("/healthz", (req, res) => res.sendStatus(200))
+  app.get("/healthz", async (_req, res) => {
+    const isMongoAlive = mongoose.connection.readyState === 1
+    const isRedisAlive = (await redis.ping()) === "PONG"
+    const statuses = Object.values(lndStatus)
+    const areLndsAlive = statuses.length > 0 && statuses.every(s => s)
+    res.status(isMongoAlive && isRedisAlive && areLndsAlive ? 200 : 503).send()
+  })
   app.listen(port, () => logger.info(`Health check listening on port ${port}!`))
 }
 
