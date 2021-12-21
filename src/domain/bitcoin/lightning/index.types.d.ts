@@ -24,6 +24,8 @@ type FeatureType = string & { [featureTypeSymbol]: never }
 type PaymentStatus =
   typeof import("./index").PaymentStatus[keyof typeof import("./index").PaymentStatus]
 
+type FailedPaymentStatus = typeof import("./index").PaymentStatus.Failed
+
 type PaymentSendStatus =
   typeof import("./index").PaymentSendStatus[keyof typeof import("./index").PaymentSendStatus]
 
@@ -55,16 +57,35 @@ type LnInvoiceLookup = {
   readonly secret: PaymentSecret
 }
 
-type LnPaymentLookup = {
-  readonly status: PaymentStatus
-  readonly roundedUpFee: Satoshis
-  readonly milliSatsAmount: MilliSatoshis
-  readonly createdAt: Date
-  readonly confirmedAt: Date | undefined
-  readonly amount: Satoshis
-  readonly secret: PaymentSecret
-  readonly request: string | undefined
+type GetPaymentsResults = import("lightning").GetPaymentsResult
+type GetFailedPaymentsResults = import("lightning").GetFailedPaymentsResult
+type LnPaymentAttempt =
+  | GetPaymentsResults["payments"][number]["attempts"][number]
+  | GetFailedPaymentsResults["payments"][number]["attempts"][number]
+
+type LnPaymentConfirmedDetails = {
+  readonly confirmedAt: Date
   readonly destination: Pubkey
+  readonly secret: PaymentSecret
+  readonly roundedUpFee: Satoshis
+  readonly milliSatsFee: MilliSatoshis
+  readonly hopPubkeys: Pubkey[] | undefined
+}
+
+type LnPaymentLookup = {
+  readonly createdAt: Date
+  readonly status: PaymentStatus
+  readonly paymentHash: PaymentHash
+  readonly paymentRequest: EncodedPaymentRequest | undefined
+  readonly milliSatsAmount: MilliSatoshis
+  readonly roundedUpAmount: Satoshis
+
+  readonly confirmedDetails: LnPaymentConfirmedDetails | undefined
+  readonly attempts: LnPaymentAttempt[] | undefined
+}
+
+type LnFailedPartialPaymentLookup = {
+  readonly status: FailedPaymentStatus
 }
 
 type LnInvoice = {
@@ -142,7 +163,7 @@ interface ILightningService {
   }: {
     pubkey?: Pubkey
     paymentHash: PaymentHash
-  }): Promise<LnPaymentLookup | LightningServiceError>
+  }): Promise<LnPaymentLookup | LnFailedPartialPaymentLookup | LightningServiceError>
 
   cancelInvoice({
     pubkey,
