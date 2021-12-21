@@ -12,6 +12,7 @@ import { setupMongoConnection } from "@services/mongodb"
 import { User } from "@services/mongoose/schema"
 import express from "express"
 import client, { register } from "prom-client"
+import healthzHandler from "./healthz-handler"
 
 const logger = baseLogger.child({ module: "exporter" })
 
@@ -140,9 +141,14 @@ const main = async () => {
     res.end(await register.metrics())
   })
 
-  server.get("/healthz", async (req, res) => {
-    res.send("OK")
-  })
+  server.get(
+    "/healthz",
+    healthzHandler({
+      checkDbConnectionStatus: true,
+      checkRedisStatus: true, // TODO: set to false when invoices/payments updates are removed from get balance
+      checkLndsStatus: true,
+    }),
+  )
 
   const port = process.env.PORT || 3000
   logger.info(`Server listening to ${port}, metrics exposed on /metrics endpoint`)
