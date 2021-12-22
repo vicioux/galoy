@@ -20,7 +20,7 @@ export const getUserForLogin = async ({
   logger,
 }: {
   userId: string
-  ip?: string
+  ip: IpAddress | null
   logger: Logger
 }): Promise<User | ApplicationError> =>
   asyncRunInSpan(
