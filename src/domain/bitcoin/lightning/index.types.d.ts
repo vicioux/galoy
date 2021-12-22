@@ -21,6 +21,9 @@ type FeatureBit = number & { [featureBitSymbol]: never }
 declare const featureTypeSymbol: unique symbol
 type FeatureType = string & { [featureTypeSymbol]: never }
 
+declare const pagingTokenSymbol: unique symbol
+type PagingToken = string & { [pagingTokenSymbol]: never }
+
 type PaymentStatus =
   typeof import("./index").PaymentStatus[keyof typeof import("./index").PaymentStatus]
 
@@ -122,6 +125,11 @@ type PayInvoiceResult = {
   roundedUpFee: Satoshis
 }
 
+type ListLnPaymentsResult = {
+  lnPayments: LnPaymentLookup[]
+  endCursor: PagingToken | undefined
+}
+
 interface ILightningService {
   isLocal(pubkey: Pubkey): boolean | LightningServiceError
 
@@ -164,6 +172,12 @@ interface ILightningService {
     pubkey?: Pubkey
     paymentHash: PaymentHash
   }): Promise<LnPaymentLookup | LnFailedPartialPaymentLookup | LightningServiceError>
+
+  listPayments({
+    after,
+  }: {
+    after: PagingToken | undefined
+  }): Promise<ListLnPaymentsResult | LightningServiceError>
 
   cancelInvoice({
     pubkey,
