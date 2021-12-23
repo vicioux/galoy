@@ -14,6 +14,7 @@ import {
   updateUsersPendingPayment,
 } from "@core/balance-sheet"
 import { SpecterWallet } from "@core/specter-wallet"
+import { updateLnPayments } from "@app/lightning"
 
 const main = async () => {
   const mongoose = await setupMongoConnection()
@@ -30,6 +31,11 @@ const main = async () => {
   const updatePendingOnChainPayments = () =>
     updateUsersPendingPayment({ onchainOnly: true })
 
+  const updateLnPaymentsCollection = async () => {
+    const result = await updateLnPayments()
+    if (result instanceof Error) throw result
+  }
+
   const tasks = [
     updateEscrows,
     updatePendingLightningTransactions,
@@ -38,6 +44,7 @@ const main = async () => {
     rebalance,
     updateRoutingFees,
     updatePendingOnChainPayments,
+    updateLnPaymentsCollection,
   ]
 
   const results: Array<boolean> = []
