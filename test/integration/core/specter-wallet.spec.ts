@@ -1,13 +1,14 @@
-import { baseLogger } from "@services/logger"
-import { UserWallet } from "@core/user-wallet"
-import { SpecterWallet } from "@core/specter-wallet"
-import { getActiveOnchainLnd } from "@services/lnd/utils"
 import { getSpecterWalletConfig } from "@config/app"
+import { SpecterWallet } from "@core/specter-wallet"
+import { UserWallet } from "@core/user-wallet"
+import { WalletAlreadyExistError } from "@domain/bitcoin/onchain"
+import { getActiveOnchainLnd } from "@services/lnd/utils"
+import { baseLogger } from "@services/logger"
 import { bitcoindClient, getChainBalance, mineBlockAndSyncAll } from "test/helpers"
 import { getBitcoindTransactions } from "test/helpers/ledger"
 
 const { lnd } = getActiveOnchainLnd()
-const specterWalletName = "specter/coldstorage"
+const specterWalletName = "specter/coldstorage" as BitcoindWalletName
 let specterWallet
 
 beforeEach(() => {
@@ -17,13 +18,17 @@ beforeEach(() => {
 })
 
 afterAll(async () => {
-  await bitcoindClient.unloadWallet({ walletName: specterWalletName })
+  await bitcoindClient.unloadWallet(specterWalletName)
 })
 
 describe("SpecterWallet", () => {
   it("creates wallet", async () => {
-    await specterWallet.createWallet()
-    const wallets = await specterWallet.listWallets()
+    const result = await bitcoindClient.createWallet(specterWalletName)
+    if (result instanceof WalletAlreadyExistError) {
+      await bitcoindClient.loadWallet(specterWalletName)
+    }
+
+    const wallets = await bitcoindClient.listWallets()
     expect(wallets.length).toBe(1)
   })
 

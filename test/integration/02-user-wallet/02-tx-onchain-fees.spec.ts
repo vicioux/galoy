@@ -2,7 +2,12 @@ import { Wallets } from "@app"
 import { getOnChainWalletConfig } from "@config/app"
 import { toSats, toTargetConfs } from "@domain/bitcoin"
 import { InsufficientBalanceError, LessThanDustThresholdError } from "@domain/errors"
-import { bitcoindClient, bitcoindOutside, getAndCreateUserWallet } from "test/helpers"
+import {
+  bitcoindClient,
+  bitcoindOutside,
+  getAndCreateUserWallet,
+  outsideWalletName,
+} from "test/helpers"
 
 const defaultAmount = toSats(6000)
 const defaultTarget = toTargetConfs(3)
@@ -19,11 +24,11 @@ const getWallet = async (testWallet: number): Promise<Wallet> => {
 beforeAll(async () => {
   userWallet0 = await getWallet(0)
   userWallet1 = await getWallet(1)
-  await bitcoindClient.loadWallet({ filename: "outside" })
+  await bitcoindClient.loadWallet(outsideWalletName)
 })
 
 afterAll(async () => {
-  await bitcoindClient.unloadWallet({ walletName: "outside" })
+  await bitcoindClient.unloadWallet(outsideWalletName)
 })
 
 describe("UserWallet - getOnchainFee", () => {

@@ -11,6 +11,7 @@ import {
   lnd1,
   lndOutside1,
   mineAndConfirm,
+  outsideWalletName,
   sendToAddressAndConfirm,
   waitUntilBlockHeight,
 } from "test/helpers"
@@ -26,7 +27,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await bitcoindClient.unloadWallet({ walletName: "outside" })
+  await bitcoindClient.unloadWallet(outsideWalletName)
 })
 
 describe("Bitcoind", () => {
@@ -36,12 +37,11 @@ describe("Bitcoind", () => {
   })
 
   it("create outside wallet", async () => {
-    const walletName = "outside"
-    const { name } = await bitcoindClient.createWallet({ wallet_name: walletName })
-    expect(name).toBe(walletName)
+    const { name } = await bitcoindClient.createWallet(outsideWalletName)
+    expect(name).toBe(outsideWalletName)
     const wallets = await bitcoindClient.listWallets()
-    expect(wallets).toContain(walletName)
-    bitcoindOutside = new BitcoindWalletClient({ walletName })
+    expect(wallets).toContain(outsideWalletName)
+    bitcoindOutside = BitcoindWalletClient(outsideWalletName)
   })
 
   it("should be funded mining 10 blocks", async () => {
@@ -57,7 +57,7 @@ describe("Bitcoind", () => {
   })
 
   it("funds outside lnd node", async () => {
-    const amount = 1
+    const amount = 1 as WholeBitcoin
     const { chain_balance: initialBalance } = await getChainBalance({ lnd: lndOutside1 })
     const sats = initialBalance + btc2sat(amount)
     await fundLnd(lndOutside1, amount)
@@ -66,7 +66,7 @@ describe("Bitcoind", () => {
   })
 
   it("funds lnd1 node", async () => {
-    const amount = 1
+    const amount = 1 as WholeBitcoin
     const { chain_balance: initialBalance } = await getChainBalance({ lnd: lnd1 })
     const sats = initialBalance + btc2sat(amount)
 

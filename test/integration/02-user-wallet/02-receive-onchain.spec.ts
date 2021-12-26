@@ -15,6 +15,7 @@ import {
   bitcoindClient,
   bitcoindOutside,
   amountAfterFeeDeduction,
+  outsideWalletName,
 } from "test/helpers"
 import { Wallets, Prices } from "@app"
 import { TxStatus } from "@domain/wallets"
@@ -45,7 +46,7 @@ beforeAll(async () => {
   walletUser0 = await getAndCreateUserWallet(0)
   // load funder wallet before use it
   await getAndCreateUserWallet(4)
-  await bitcoindClient.loadWallet({ filename: "outside" })
+  await bitcoindClient.loadWallet(outsideWalletName)
 })
 
 beforeEach(() => {
@@ -59,7 +60,7 @@ afterEach(async () => {
 
 afterAll(async () => {
   jest.restoreAllMocks()
-  await bitcoindClient.unloadWallet({ walletName: "outside" })
+  await bitcoindClient.unloadWallet(outsideWalletName)
 })
 
 describe("FunderWallet - On chain", () => {

@@ -1,7 +1,9 @@
 import Client from "bitcoin-core"
-import sumBy from "lodash.sumby"
 
 import { btc2sat } from "@core/utils"
+import { toSats } from "@domain/bitcoin"
+import { UnknownRepositoryError } from "@domain/errors"
+import { WalletAlreadyExistError } from "@domain/bitcoin/onchain"
 
 const connection_obj = {
   network: process.env.NETWORK,
@@ -9,187 +11,191 @@ const connection_obj = {
   password: process.env.BITCOINDRPCPASS,
   host: process.env.BITCOINDADDR,
   port: process.env.BITCOINDPORT,
-  version: "0.21.0",
+  version: "0.22.0",
 }
 
-type GetAddressInfoResult = {
-  address: string
-  scriptPubKey: string
-  ismine: boolean
-  iswatchonly: boolean
-  solvable: boolean
-  isscript: boolean
-  ischange: boolean
-  iswitness: boolean
-  // TODO? all avaialable: https://developer.bitcoin.org/reference/rpc/getaddressinfo.html#result
-}
+export const BitcoindService = (): IBitcoindService => {
+  const client = new Client({ ...connection_obj })
 
-type InWalletTransaction = {
-  "amount": number
-  "fee": number
-  "confirmations": number
-  "generated": boolean
-  "trusted": boolean
-  "blockhash": string
-  "blockheight": number
-  "blockindex": number
-  "blocktime": number
-  "txid": string
-  "time": number
-  "timereceived": number
-  "comment": string
-  "bip125-replaceable": string
-  "hex": string
-  // TODO? all avaialable: https://developer.bitcoin.org/reference/rpc/gettransaction.html#result
-}
-
-export class BitcoindClient {
-  readonly client
-
-  constructor() {
-    this.client = new Client({ ...connection_obj })
+  const getBlockCount = async (): Promise<number> => {
+    return client.getBlockCount()
   }
 
-  async getBlockCount(): Promise<number> {
-    return this.client.getBlockCount()
+  const getBlockchainInfo = async (): Promise<{ chain: BtcNetwork }> => {
+    return client.getBlockchainInfo()
   }
 
-  async getBlockchainInfo(): Promise<{ chain: string }> {
-    return this.client.getBlockchainInfo()
+  const createWallet = async (
+    walletName: BitcoindWalletName,
+  ): Promise<
+    | { name: BitcoindWalletName; warning: string }
+    | UnknownRepositoryError
+    | WalletAlreadyExistError
+  > => {
+    try {
+      const result = await client.createWallet({ wallet_name: walletName })
+      return result
+    } catch (err) {
+      if (err?.message.includes("Database already exists")) {
+        return new WalletAlreadyExistError(err)
+      }
+      return new UnknownRepositoryError(err)
+    }
   }
 
-  async createWallet({
-    wallet_name,
-  }: {
-    wallet_name: string
-  }): Promise<{ name: string; warning: string }> {
-    return this.client.createWallet({ wallet_name })
-  }
-
-  async listWallets(): Promise<[string]> {
-    return this.client.listWallets()
+  const listWallets = async (): Promise<BitcoindWalletName[]> => {
+    return client.listWallets()
   }
 
   // load/unload only used in tests, for now
 
-  async loadWallet({
-    filename,
-  }: {
-    filename: string
-  }): Promise<{ name: string; warning: string }> {
-    return this.client.loadWallet({ filename })
+  const loadWallet = async (
+    walletName: BitcoindWalletName,
+  ): Promise<{ name: string; warning: string }> => {
+    return client.loadWallet({ filename: walletName })
   }
 
-  async unloadWallet({
-    walletName,
-  }: {
-    walletName: string
-  }): Promise<{ warning: string }> {
-    return this.client.unloadWallet({ wallet_name: walletName })
+  const unloadWallet = async (
+    walletName: BitcoindWalletName,
+  ): Promise<{ warning: string }> => {
+    return client.unloadWallet({ wallet_name: walletName })
+  }
+
+  return {
+    getBlockCount,
+    getBlockchainInfo,
+    createWallet,
+    listWallets,
+    loadWallet,
+    unloadWallet,
   }
 }
 
-export class BitcoindWalletClient {
-  readonly client
+export const BitcoindWalletClient = (
+  walletName: BitcoindWalletName,
+): IBitcoindWalletService => {
+  const client = new Client({ ...connection_obj, wallet: walletName })
 
-  constructor({ walletName }: { walletName: string }) {
-    this.client = new Client({ ...connection_obj, wallet: walletName })
+  const getNewAddress = async (): Promise<OnChainAddress> => {
+    return client.getNewAddress()
   }
 
-  async getNewAddress(): Promise<string> {
-    return this.client.getNewAddress()
+  const getAddressInfo = async (
+    address: OnChainAddress,
+  ): Promise<GetAddressInfoResult> => {
+    return client.getAddressInfo({ address })
   }
 
-  async getAddressInfo({ address }: { address: string }): Promise<GetAddressInfoResult> {
-    return this.client.getAddressInfo({ address })
-  }
-
-  async sendToAddress({
+  const sendToAddress = async ({
     address,
     amount,
   }: {
-    address: string
-    amount: number
-  }): Promise<string> {
-    return this.client.sendToAddress({ address, amount })
+    address: OnChainAddress
+    amount: WholeBitcoin
+  }): Promise<string> => {
+    return client.sendToAddress({ address, amount })
   }
 
-  async getTransaction({
+  const getTransaction = async ({
     txid,
     include_watchonly,
   }: {
-    txid: string
+    txid: OnChainTxHash
     include_watchonly?: boolean
-  }): Promise<InWalletTransaction> {
-    return this.client.getTransaction({ txid, include_watchonly })
+  }): Promise<InWalletTransaction> => {
+    return client.getTransaction({ txid, include_watchonly })
   }
 
-  async generateToAddress({
+  const generateToAddress = async ({
     nblocks,
     address,
   }: {
     nblocks: number
-    address: string
-  }): Promise<[string]> {
-    return this.client.generateToAddress({ nblocks, address })
+    address: OnChainAddress
+  }): Promise<[string]> => {
+    return client.generateToAddress({ nblocks, address })
   }
 
-  async getBalance(): Promise<number> {
-    return this.client.getBalance()
+  const getBalance = async (): Promise<WholeBitcoin> => {
+    return client.getBalance()
   }
 
-  async walletCreateFundedPsbt({
+  const walletCreateFundedPsbt = async ({
     inputs,
     outputs,
   }: {
-    inputs: []
+    inputs: unknown[]
     outputs: Record<string, number>[]
-  }): Promise<{ psbt: string }> {
-    return this.client.walletCreateFundedPsbt({ inputs, outputs })
+  }): Promise<{ psbt: string }> => {
+    return client.walletCreateFundedPsbt({ inputs, outputs })
   }
 
-  async walletProcessPsbt({ psbt }: { psbt: string }): Promise<{ psbt: string }> {
-    return this.client.walletProcessPsbt({ psbt })
-  }
-
-  async finalizePsbt({
+  const walletProcessPsbt = async ({
     psbt,
   }: {
     psbt: string
-  }): Promise<{ psbt: string; hex: string; complete: boolean }> {
-    return this.client.finalizePsbt({ psbt })
+  }): Promise<{ psbt: string }> => {
+    return client.walletProcessPsbt({ psbt })
   }
 
-  async sendRawTransaction({ hexstring }: { hexstring: string }): Promise<string> {
-    return this.client.sendRawTransaction({ hexstring })
+  const finalizePsbt = async ({
+    psbt,
+  }: {
+    psbt: string
+  }): Promise<{ psbt: string; hex: string; complete: boolean }> => {
+    return client.finalizePsbt({ psbt })
+  }
+
+  const sendRawTransaction = async ({
+    hexstring,
+  }: {
+    hexstring: string
+  }): Promise<string> => {
+    return client.sendRawTransaction({ hexstring })
+  }
+
+  return {
+    getNewAddress,
+    getAddressInfo,
+    sendToAddress,
+    getTransaction,
+    generateToAddress,
+    getBalance,
+    walletCreateFundedPsbt,
+    walletProcessPsbt,
+    finalizePsbt,
+    sendRawTransaction,
   }
 }
 
-// The default client should remain without a wallet (not generate or receive bitcoin)
-export const bitcoindDefaultClient = new BitcoindClient()
+export const bitcoindDefaultClient = BitcoindService()
 
 export const getBalancesDetail = async (): Promise<
-  { wallet: string; balance: number }[]
+  { wallet: BitcoindWalletName; balance: Satoshis }[]
 > => {
   const wallets = await bitcoindDefaultClient.listWallets()
 
-  const balances: { wallet: string; balance: number }[] = []
+  const balances: { wallet: BitcoindWalletName; balance: Satoshis }[] = []
 
   for await (const wallet of wallets) {
     // do not consider the "outside" wallet in tests
-    if (wallet === "" || wallet === "outside") {
+    const emptyWallet = "" as BitcoindWalletName
+    const outsideWAllet = "outside" as BitcoindWalletName
+
+    if (wallet === emptyWallet || wallet === outsideWAllet) {
       continue
     }
 
-    const client = new BitcoindWalletClient({ walletName: wallet })
-    const balance = btc2sat(await client.getBalance())
+    const client = BitcoindWalletClient(wallet)
+    const balance = toSats(btc2sat(await client.getBalance()))
     balances.push({ wallet, balance })
   }
 
   return balances
 }
 
-export const getBalance = async (): Promise<number> => {
+export const getBalance = async (): Promise<Satoshis> => {
   const balanceObj = await getBalancesDetail()
-  return sumBy(balanceObj, "balance")
+  const balances = balanceObj.map((wallet) => wallet.balance)
+  return balances.reduce((a, b) => toSats(a + b), toSats(0))
 }

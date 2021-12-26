@@ -31,6 +31,7 @@ import {
   mineBlockAndSyncAll,
   RANDOM_ADDRESS,
   subscribeToTransactions,
+  outsideWalletName,
 } from "test/helpers"
 import { getBTCBalance, getRemainingTwoFALimit } from "test/helpers/wallet"
 
@@ -53,7 +54,7 @@ beforeAll(async () => {
   userWallet12 = await getAndCreateUserWallet(12)
   // load funder wallet before use it
   await getAndCreateUserWallet(4)
-  await bitcoindClient.loadWallet({ filename: "outside" })
+  await bitcoindClient.loadWallet(outsideWalletName)
 })
 
 beforeEach(async () => {
@@ -66,7 +67,7 @@ afterEach(async () => {
 
 afterAll(async () => {
   jest.restoreAllMocks()
-  await bitcoindClient.unloadWallet({ walletName: "outside" })
+  await bitcoindClient.unloadWallet(outsideWalletName)
 })
 
 const amount = 10040 // sats

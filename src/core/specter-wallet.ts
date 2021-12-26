@@ -13,10 +13,10 @@ import { OnChainService } from "@services/lnd/onchain-service"
 import { TxDecoder } from "@domain/bitcoin/onchain"
 
 // TODO no longer used in tests, removing the creation of the default wallet didn't break anything
-const staticClient = ""
+const staticClient = "" as BitcoindWalletName
 
 export class SpecterWallet {
-  bitcoindClient // TODO rename?
+  bitcoindClient
   readonly logger: Logger
   readonly config: SpecterWalletConfig
 
@@ -27,16 +27,8 @@ export class SpecterWallet {
     assert(this.config.onchainWallet !== "")
   }
 
-  async listWallets() {
-    return bitcoindDefaultClient.listWallets()
-  }
-
-  async createWallet() {
-    return bitcoindDefaultClient.createWallet({ wallet_name: "specter/coldstorage" })
-  }
-
-  async setBitcoindClient(): Promise<string> {
-    const wallets = await this.listWallets()
+  async setBitcoindClient(): Promise<BitcoindWalletName> {
+    const wallets = await bitcoindDefaultClient.listWallets()
 
     const pattern = this.config.onchainWallet
     const specterWallets = wallets.filter((item) => item.includes(pattern))
@@ -59,7 +51,7 @@ export class SpecterWallet {
 
     this.logger.info({ wallet: specterWallets[0] }, "setting BitcoindClient")
 
-    this.bitcoindClient = new BitcoindWalletClient({ walletName: specterWallets[0] })
+    this.bitcoindClient = BitcoindWalletClient(specterWallets[0])
 
     return specterWallets[0]
   }

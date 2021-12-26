@@ -12,6 +12,7 @@ import { getTitle } from "@services/notifications/payment"
 import {
   amountAfterFeeDeduction,
   bitcoindClient,
+  outsideWalletName,
   bitcoindOutside,
   getAndCreateUserWallet,
   getInvoice,
@@ -32,7 +33,7 @@ jest.mock("@services/notifications/notification")
 const { sendNotification } = require("@services/notifications/notification")
 
 beforeAll(async () => {
-  await bitcoindClient.loadWallet({ filename: "outside" })
+  await bitcoindClient.loadWallet(outsideWalletName)
 })
 
 beforeEach(() => {
@@ -41,7 +42,7 @@ beforeEach(() => {
 
 afterAll(async () => {
   jest.restoreAllMocks()
-  await bitcoindClient.unloadWallet({ walletName: "outside" })
+  await bitcoindClient.unloadWallet(outsideWalletName)
 })
 
 const getWalletState = async (wallet) => {
