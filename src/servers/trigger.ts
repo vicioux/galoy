@@ -19,7 +19,6 @@ import { ONCHAIN_MIN_CONFIRMATIONS } from "@config/app"
 import { Wallets, Prices } from "@app"
 import { NotificationsService } from "@services/notifications"
 import { toSats } from "@domain/bitcoin"
-import { getCurrentPrice } from "@app/prices"
 import healthzHandler from "./healthz-handler"
 
 const logger = baseLogger.child({ module: "trigger" })
