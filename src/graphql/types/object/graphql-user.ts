@@ -12,11 +12,10 @@ import UserContact from "./wallet-contact"
 import UserQuizQuestion from "./user-quiz-question"
 import Username from "../scalar/username"
 
-import * as Accounts from "@app/accounts"
-import * as Users from "@app/users"
+import { Users } from "@app"
 import { UnknownClientError } from "@core/error"
 
-const GraphQLUser = new GT.Object({
+const GraphQLUser = new GT.Object<User, GraphQLContext>({
   name: "User",
   fields: () => ({
     id: {
@@ -28,10 +27,16 @@ const GraphQLUser = new GT.Object({
       type: GT.NonNull(Phone),
       description: "Phone number with international calling code.",
     },
+
     username: {
       type: Username,
       description: "Optional immutable user friendly identifier.",
+      resolve: async (source, args, { domainAccount }) => {
+        return domainAccount?.username
+      },
+      deprecationReason: "will be moved to @Handle in Account and Wallet",
     },
+
     language: {
       type: GT.NonNull(Language),
       description: dedent`Preferred language for user.
@@ -58,6 +63,9 @@ const GraphQLUser = new GT.Object({
       },
       resolve: async (source, args, { domainUser }) => {
         const { username } = args
+        if (!domainUser) {
+          throw new UnknownClientError("Something went wrong")
+        }
         if (username instanceof Error) {
           throw username
         }
@@ -79,19 +87,12 @@ const GraphQLUser = new GT.Object({
 
     createdAt: {
       type: GT.NonNull(Timestamp),
-      resolve: (source) => source.createdAt ?? source.created_at, // TODO: Get rid of this resolver
     },
 
     defaultAccount: {
       type: GT.NonNull(Account),
-      resolve: async (source, args, { domainUser }: { domainUser: User }) => {
-        // TODO: could also be return domainAccount
-        const account = await Accounts.getAccount(domainUser.defaultAccountId)
-        if (account instanceof Error) {
-          throw account
-        }
-
-        return account
+      resolve: async (source, args, { domainAccount }) => {
+        return domainAccount
       },
     },
 

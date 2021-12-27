@@ -1,5 +1,4 @@
-import { getCurrentPrice } from "@app/prices"
-import * as Wallets from "@app/wallets"
+import { Wallets, Prices } from "@app"
 import {
   checkAndVerifyTwoFA,
   checkIntraledgerLimits,
@@ -145,7 +144,7 @@ export const OnChainMixin = (superclass) =>
             sendAll,
           }
 
-          const price = await getCurrentPrice()
+          const price = await Prices.getCurrentPrice()
           if (price instanceof Error) throw price
           const onChainFee = toSats(0)
           const usd = sats * price

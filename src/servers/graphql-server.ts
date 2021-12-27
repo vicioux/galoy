@@ -12,8 +12,7 @@ import { v4 as uuidv4 } from "uuid"
 import helmet from "helmet"
 
 import { getApolloConfig, getGeetestConfig, isProd, JWT_SECRET } from "@config/app"
-import * as Users from "@app/users"
-import * as Accounts from "@app/accounts"
+import { Accounts, Users } from "@app"
 
 import { baseLogger } from "@services/logger"
 import { User } from "@services/mongoose/schema"
@@ -55,7 +54,13 @@ export const isEditor = rule({ cache: "contextual" })((parent, args, ctx) => {
 const geeTestConfig = getGeetestConfig()
 const geetest = Geetest(geeTestConfig)
 
-const sessionContext = ({ token, ips, body, apiKey, apiSecret }) => {
+const sessionContext = ({
+  token,
+  ips,
+  body,
+  apiKey,
+  apiSecret,
+}): Promise<GraphQLContext> => {
   const userId = token?.uid ?? null
   let ip: string | undefined
 
