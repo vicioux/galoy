@@ -4,28 +4,33 @@
  */
 
 // we have to import schema before medici
-import { Transaction } from "./schema"
-
-import * as accounts from "./accounts"
-import * as queries from "./query"
-import * as transactions from "./transaction"
-
 import {
   CouldNotFindTransactionError,
   UnknownLedgerError,
   LedgerError,
   LedgerServiceError,
 } from "@domain/ledger/errors"
-import { MainBook } from "./books"
+
 import { toSats } from "@domain/bitcoin"
+
 import {
   LedgerTransactionType,
   liabilitiesMainAccount,
   toLiabilitiesWalletId,
   toWalletId,
 } from "@domain/ledger"
-import { lndAccountingPath, getBankOwnerWalletId } from "./accounts"
+
 import { wrapAsyncToRunInSpan } from "@services/tracing"
+
+import { Transaction } from "./schema"
+
+import * as accounts from "./accounts"
+import * as queries from "./query"
+import * as transactions from "./transaction"
+
+import { MainBook } from "./books"
+
+import { lndAccountingPath, getBankOwnerWalletId } from "./accounts"
 
 export const loadLedger = ({
   bankOwnerWalletResolver,
